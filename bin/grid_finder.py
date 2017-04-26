@@ -11,17 +11,18 @@ import argparse
 logging.basicConfig(filename='crossy.log',level=logging.INFO)
 global args
 
-def outputVertices(verts,imgDim,delta=10):
+def outputVertices(verts,imgDim,offset=10):
     max = np.amax(verts)
     min = np.amin(verts)
     ret = np.round(np.divide(np.subtract(verts,min),max-min)).astype(int)
-    ret[ret==0] = delta
-    ret[ret==1] = imgDim-delta
+    ret[ret==0] = offset
+    ret[ret==1] = imgDim-offset
     logging.debug(ret)
     return ret
     
     
 def findGrid():
+    logging.debug("[Start] findGrid()")
     imgDim=args.size
     inputFile=args.inputFile+"."+args.ext
     outFile=args.inputFile+"_cropped."+args.ext
@@ -31,6 +32,7 @@ def findGrid():
 
     img =  cv2.imread(inputFile)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    cv2.fastNlMeansDenoising(gray,gray,7,21,5) 
 
     gray = cv2.GaussianBlur(gray,(5,5),0)
     thresh = cv2.adaptiveThreshold(gray,255,1,1,11,2)
@@ -52,8 +54,8 @@ def findGrid():
                         biggest = approx
                         max_area = area  
                         
-    logging.info("Max Area is:" + str(max_area))
-    logging.info("Vertices of max are:" + str(biggest))
+    logging.debug("Max Area is:" + str(max_area))
+    logging.debug("Vertices of max are:" + str(biggest))
     cv2.drawContours(img,[biggest],-1,(0,255,0), 3)
     simage=Image.fromarray(img)
     simage.save(outFileBox)
@@ -66,9 +68,10 @@ def findGrid():
     print(pts1)
     print(pts2)
     M = cv2.getPerspectiveTransform(pts1,pts2)
-    thumbnail = cv2.warpPerspective(thresh, M, (imgDim, imgDim))
+    thumbnail = cv2.warpPerspective(gray, M, (imgDim, imgDim))
     simage=Image.fromarray(thumbnail)
     simage.save(outFile)
+    logging.debug("[End] findGrid()")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Find the largest square in an image')
